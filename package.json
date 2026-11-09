@@ -1,0 +1,20 @@
+{
+  "name": "opencode-scheduler-local",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "OpenCode v2 plugin: schedule prompts to run in new sessions, with a side panel in the desktop app.",
+  "scripts": {
+    "build": "rm -rf dist && mkdir -p dist && cp src/server.js src/schedule.js src/rpc.js dist/ && vite build",
+    "test": "node test/schedule.test.js",
+    "install-plugin": "npm run build && rm -rf ~/.config/opencode/plugins/scheduler && cp -R dist ~/.config/opencode/plugins/scheduler"
+  },
+  "devDependencies": {
+    "@opencode/plugin": "2.2.6",
+    "solid-js": "1.9.17",
+    "vite": "7.3.7",
+    "vite-plugin-solid": "2.11.10",
+    "effect": "4.1.0",
+    "typescript": "5.9.3"
+  }
+}

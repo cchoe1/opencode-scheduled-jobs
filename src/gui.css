@@ -1,0 +1,151 @@
+.sched {
+  --sched-line: color-mix(in srgb, currentColor 14%, transparent);
+  --sched-soft: color-mix(in srgb, currentColor 5%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  min-width: 0;
+  font-size: 13px;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+.sched-head,
+.sched-job-top,
+.sched-title,
+.sched-actions,
+.sched-job-actions,
+.sched-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sched-head,
+.sched-job-top {
+  justify-content: space-between;
+}
+.sched-title {
+  font-weight: 600;
+}
+.sched-muted,
+.sched-hint {
+  opacity: 0.65;
+  font-size: 12px;
+}
+.sched-error {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, #e5484d 50%, transparent);
+  background: color-mix(in srgb, #e5484d 10%, transparent);
+}
+.sched-bad {
+  color: #e5484d;
+  opacity: 1;
+}
+.sched-empty {
+  padding: 16px;
+  border: 1px dashed var(--sched-line);
+  border-radius: 8px;
+  opacity: 0.75;
+  line-height: 1.5;
+}
+.sched-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--sched-line);
+  border-radius: 8px;
+  background: var(--sched-soft);
+}
+.sched-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.sched-form label > span:first-child {
+  font-weight: 500;
+  font-size: 12px;
+}
+.sched-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.sched-textarea {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--sched-line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  resize: vertical;
+  min-height: 80px;
+}
+.sched-textarea:focus {
+  outline: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  outline-offset: -1px;
+}
+.sched-form-actions {
+  justify-content: flex-end;
+}
+.sched-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sched-job {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--sched-line);
+  border-radius: 8px;
+}
+.sched-paused {
+  opacity: 0.6;
+}
+.sched-job-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.sched-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 12px;
+}
+.sched-meta a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--sched-line);
+}
+.sched-prompt {
+  white-space: pre-wrap;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  line-height: 1.45;
+}
+.sched-dir {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sched-foot {
+  margin-top: auto;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  opacity: 0.5;
+}
