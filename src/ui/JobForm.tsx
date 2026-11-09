@@ -2,7 +2,7 @@ import { createEffect, createMemo, createSignal, For, on, onCleanup, Show } from
 import { createStore } from "solid-js/store"
 import { fmt, systemZone, wallClock, zones } from "./time.js"
 import { message } from "./rpc.js"
-import type { Env, Job, Preview, Repeat, Schedule } from "./types.js"
+import type { AgentsOutput, Env, Job, ModelsOutput, Preview, Repeat, Schedule } from "./types.js"
 
 const REPEATS: { value: Repeat; label: string }[] = [
   { value: "none", label: "None (run once)" },
@@ -95,6 +95,58 @@ export function JobForm(props: { env: Env; job?: Job; onCancel(): void; onSaved(
   const [error, setError] = createSignal<string | undefined>()
   const [preview, setPreview] = createSignal<Preview>()
   const [checking, setChecking] = createSignal(false)
+
+  // Model picker: the server's enabled models; falls back to free text when the list is unavailable or empty.
+  const [models, setModels] = createSignal<ModelsOutput | "loading" | "failed">("loading")
+  env.rpc
+    .models()
+    .then((m) => setModels(m?.models?.length ? m : "failed"))
+    .catch(() => setModels("failed"))
+  const baseModel = () => f.model.trim().split("#")[0]
+  const variant = () => f.model.trim().split("#")[1] ?? ""
+  const modelList = () => {
+    const m = models()
+    return typeof m === "object" ? m : undefined
+  }
+  const selected = () => modelList()?.models.find((m) => m.ref === baseModel())
+  const modelOptions = () => {
+    const m = modelList()
+    if (!m) return []
+    const def = m.default && m.models.find((x) => x.ref === m.default)
+    const opts = [
+      { value: "", label: def ? `Default (${def.provider} · ${def.name})` : "Default" },
+      ...m.models.map((x) => ({ value: x.ref, label: `${x.provider} · ${x.name}` })),
+    ]
+    if (baseModel() && !selected()) opts.push({ value: baseModel(), label: `${baseModel()} (not available)` })
+    return opts
+  }
+  const variantOptions = () => {
+    const vs = selected()?.variants ?? []
+    const opts = [{ value: "", label: "Default" }, ...vs.map((v) => ({ value: v, label: v }))]
+    if (variant() && !vs.includes(variant())) opts.push({ value: variant(), label: `${variant()} (not available)` })
+    return opts
+  }
+  const pickModel = (ref: string) => setF("model", ref)
+  const pickVariant = (v: string) => setF("model", v ? `${baseModel()}#${v}` : baseModel())
+
+  // Agent picker: the server's primary agents; falls back to free text when the list is unavailable or empty.
+  const [agents, setAgents] = createSignal<AgentsOutput | "loading" | "failed">("loading")
+  env.rpc
+    .agents()
+    .then((a) => setAgents(a?.agents?.length ? a : "failed"))
+    .catch(() => setAgents("failed"))
+  const agentList = () => {
+    const a = agents()
+    return typeof a === "object" ? a.agents : undefined
+  }
+  const selectedAgent = () => agentList()?.find((a) => a.id === f.agent.trim())
+  const agentOptions = () => {
+    const list = agentList()
+    if (!list) return []
+    const opts = [{ value: "", label: "Default" }, ...list.map((a) => ({ value: a.id, label: a.name }))]
+    if (f.agent.trim() && !selectedAgent()) opts.push({ value: f.agent.trim(), label: `${f.agent.trim()} (not available)` })
+    return opts
+  }
 
   const tzOptions = zones([props.job?.schedule.timezone ?? ""]).map((z) => ({ value: z, label: z }))
   const repeatOptions = wasCron ? [...REPEATS, { value: "cron" as Repeat, label: "Custom (cron)" }] : REPEATS
@@ -204,9 +256,56 @@ export function JobForm(props: { env: Env; job?: Job; onCancel(): void; onSaved(
       )}
       {field("Project directory", <ui.TextInput label="Project directory" value={f.directory} placeholder="/path/to/project" onInput={(v) => setF("directory", v)} />)}
       <div class="sched-row2">
-        {field("Agent (optional)", <ui.TextInput label="Agent" value={f.agent} placeholder="build" onInput={(v) => setF("agent", v)} />)}
-        {field("Model (optional)", <ui.TextInput label="Model" value={f.model} placeholder="provider/model#variant" onInput={(v) => setF("model", v)} />)}
+        {field(
+          "Agent (optional)",
+          <Show
+            when={agents() !== "failed"}
+            fallback={<ui.TextInput label="Agent" value={f.agent} placeholder="build" onInput={(v) => setF("agent", v)} />}
+          >
+            <ui.Select<string>
+              label="Agent"
+              options={agentOptions()}
+              value={f.agent.trim()}
+              placeholder="Loading agents…"
+              disabled={agents() === "loading"}
+              placement="bottom-start"
+              onChange={(v) => setF("agent", v)}
+            />
+          </Show>,
+        )}
+        {field(
+          "Model (optional)",
+          <Show
+            when={models() !== "failed"}
+            fallback={<ui.TextInput label="Model" value={f.model} placeholder="provider/model#variant" onInput={(v) => setF("model", v)} />}
+          >
+            <ui.Select<string>
+              label="Model"
+              options={modelOptions()}
+              value={baseModel()}
+              placeholder="Loading models…"
+              disabled={models() === "loading"}
+              placement="bottom-start"
+              onChange={pickModel}
+            />
+          </Show>,
+        )}
       </div>
+      <Show when={selectedAgent()?.description || (selectedAgent()?.model && !f.model.trim())}>
+        <div class="sched-muted">
+          {selectedAgent()?.description}
+          {selectedAgent()?.model && !f.model.trim() ? `${selectedAgent()?.description ? " · " : ""}Uses ${selectedAgent()!.model} unless you pick a model.` : ""}
+        </div>
+      </Show>
+      <Show when={models() !== "failed" && baseModel() && (selected()?.variants.length || variant())}>
+        <div class="sched-row2">
+          <div />
+          {field(
+            "Variant",
+            <ui.Select<string> label="Variant" options={variantOptions()} value={variant()} placement="bottom-start" onChange={pickVariant} />,
+          )}
+        </div>
+      </Show>
 
       <fieldset class="sched-group">
         <legend>Schedule</legend>

@@ -106,6 +106,8 @@ again on startup.
 | `logs` | `{ id, limit?: number }` | `{ runs: Run[] }` |
 | `result` | `{ sessionID }` | `{ text: string }`, the session's final assistant reply, read on demand and never stored |
 | `presence` | `{}` | `{ ok: true }`; the desktop UI calls it every 30 s (see Notifications) |
+| `models` | `{}` | `{ models: { ref: "provider/model", provider, name, variants: string[] }[], default?: string }`: enabled chat models of the connected providers, sorted by provider then name; `default` is OpenCode's default model ref |
+| `agents` | `{}` | `{ agents: { id, name, description?, model? }[] }`: primary, non-hidden agents sorted by name; `model` is the agent's own model (`provider/model#variant`) when it sets one |
 
 ## RPC events
 

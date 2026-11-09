@@ -1,6 +1,6 @@
 import type { Context } from "@opencode/plugin/gui"
 import { Scheduler } from "../rpc.js"
-import type { ListOutput, Job, Occurrences, Preview, Run, Schedule } from "./types.js"
+import type { AgentsOutput, ListOutput, Job, ModelsOutput, Occurrences, Preview, Run, Schedule } from "./types.js"
 
 export const message = (e: unknown) => (e && typeof e === "object" && "message" in e ? String((e as any).message) : String(e))
 
@@ -29,6 +29,8 @@ export function makeRpc(ctx: Context, directory?: () => string | undefined) {
     logs: (id: string, limit?: number) => client.logs({ id, limit }, opts()) as Promise<{ runs: Run[] }>,
     result: (sessionID: string) => client.result({ sessionID }, opts()) as Promise<{ text: string }>,
     presence: () => client.presence({}, opts()) as Promise<{ ok: true }>,
+    models: () => client.models({}, opts()) as Promise<ModelsOutput>,
+    agents: () => client.agents({}, opts()) as Promise<AgentsOutput>,
   }
 }
 export type Rpc = ReturnType<typeof makeRpc>

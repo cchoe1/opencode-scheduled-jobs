@@ -49,6 +49,10 @@ export const Scheduler = {
     },
     /** The desktop UI's heartbeat: while one is recent, the server leaves notifications to the app. */
     presence: { input: obj, output: obj },
+    /** Enabled chat models of the connected providers, for the job form's model picker. */
+    models: { input: obj, output: obj },
+    /** Primary, visible agents, for the job form's agent picker. */
+    agents: { input: obj, output: obj },
   },
   events: {
     /** The job list changed (a save, removal, run, or expiry). */

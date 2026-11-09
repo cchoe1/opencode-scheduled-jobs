@@ -637,6 +637,60 @@ await t("result: unavailable when the messages can't be read", async () => {
   await e.teardown()
 })
 
+await t("models: enabled chat models, sorted, with provider names, variants and the default", async () => {
+  const e = await setup()
+  try {
+    assert.deepEqual(await e.rpc.models(), { models: [] }) // no model API: empty list, the form falls back to text
+    e.ctx.model = {
+      list: async () => ({
+        location: {},
+        data: [
+          { providerID: "openai", id: "gpt-x", name: "GPT X", enabled: true, type: "chat", variants: [] },
+          { providerID: "anthropic", id: "claude-b", name: "Claude B", enabled: true, variants: [{ id: "high" }, { id: "low" }] },
+          { providerID: "anthropic", id: "claude-a", name: "Claude A", enabled: true, variants: [] },
+          { providerID: "anthropic", id: "off", name: "Off", enabled: false, variants: [] },
+          { providerID: "openai", id: "img", name: "Image", enabled: true, type: "image", variants: [] },
+        ],
+      }),
+      default: async () => ({ location: {}, data: { providerID: "anthropic", id: "claude-b" } }),
+    }
+    e.ctx.provider = { list: async () => ({ location: {}, data: [{ id: "anthropic", name: "Anthropic" }] }) }
+    const out = await e.rpc.models()
+    assert.equal(out.default, "anthropic/claude-b")
+    assert.deepEqual(out.models, [
+      { ref: "anthropic/claude-a", provider: "Anthropic", name: "Claude A", variants: [] },
+      { ref: "anthropic/claude-b", provider: "Anthropic", name: "Claude B", variants: ["high", "low"] },
+      { ref: "openai/gpt-x", provider: "openai", name: "GPT X", variants: [] },
+    ])
+  } finally {
+    await e.teardown()
+  }
+})
+
+await t("agents: primary, visible agents sorted by name, with description and own model", async () => {
+  const e = await setup()
+  try {
+    assert.deepEqual(await e.rpc.agents(), { agents: [] }) // no agent API: empty list, the form falls back to text
+    e.ctx.agent = {
+      list: async () => ({
+        location: {},
+        data: [
+          { id: "plan", name: "Plan", mode: "primary", hidden: false, description: "Read-only planning" },
+          { id: "build", name: "Build", mode: "all", hidden: false, model: { providerID: "anthropic", id: "claude-x", variant: "high" } },
+          { id: "explore", name: "Explore", mode: "subagent", hidden: false },
+          { id: "title", name: "Title", mode: "primary", hidden: true },
+        ],
+      }),
+    }
+    assert.deepEqual((await e.rpc.agents()).agents, [
+      { id: "build", name: "Build", model: "anthropic/claude-x#high" },
+      { id: "plan", name: "Plan", description: "Read-only planning" },
+    ])
+  } finally {
+    await e.teardown()
+  }
+})
+
 await t("agent tools", async () => {
   const e = await setup()
   assert.deepEqual(Object.keys(e.tools).sort(), ["list_scheduled_jobs", "remove_scheduled_job", "run_scheduled_job", "schedule_job", "scheduled_job_logs"])

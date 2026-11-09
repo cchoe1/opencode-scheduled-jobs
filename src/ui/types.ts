@@ -55,6 +55,10 @@ export type Occurrences = {
   items: { jobId: string; name: string; at: number; status: "scheduled" | "paused" }[]
   runs: (RunSummary & { jobId: string; name: string })[]
 }
+export type ModelOption = { ref: string; provider: string; name: string; variants: string[] }
+export type ModelsOutput = { models: ModelOption[]; default?: string }
+export type AgentOption = { id: string; name: string; description?: string; model?: string }
+export type AgentsOutput = { agents: AgentOption[] }
 export type JobEventInfo = { id: string; name: string; notify: Notify }
 
 /** Everything the UI modules need from the plugin. */

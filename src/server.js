@@ -772,6 +772,43 @@ async function occurrencesOutput(from, to) {
   return out
 }
 
+/** Enabled chat models of the location's connected providers, for the job form's model picker. */
+async function modelsOutput(ctx) {
+  if (typeof ctx?.model?.list !== "function") return { models: [] }
+  const list = unwrap(await ctx.model.list())
+  const [providers, def] = await Promise.all([
+    typeof ctx.provider?.list === "function" ? ctx.provider.list().then(unwrap, () => []) : [],
+    typeof ctx.model.default === "function" ? ctx.model.default().then(unwrap, () => undefined) : undefined,
+  ])
+  const providerName = new Map((Array.isArray(providers) ? providers : []).map((p) => [p.id, p.name || p.id]))
+  const models = (Array.isArray(list) ? list : [])
+    .filter((m) => m?.providerID && m?.id && m.enabled !== false && (!m.type || m.type === "chat"))
+    .map((m) => ({
+      ref: `${m.providerID}/${m.id}`,
+      provider: providerName.get(m.providerID) ?? m.providerID,
+      name: m.name || m.id,
+      variants: (m.variants ?? []).map((v) => v?.id).filter(Boolean),
+    }))
+    .sort((a, b) => a.provider.localeCompare(b.provider) || a.name.localeCompare(b.name))
+  return { models, ...(def?.providerID && def?.id ? { default: `${def.providerID}/${def.id}` } : {}) }
+}
+
+/** Primary, visible agents of the location, for the job form's agent picker. */
+async function agentsOutput(ctx) {
+  if (typeof ctx?.agent?.list !== "function") return { agents: [] }
+  const list = unwrap(await ctx.agent.list())
+  const agents = (Array.isArray(list) ? list : [])
+    .filter((a) => a?.id && !a.hidden && a.mode !== "subagent")
+    .map((a) => ({
+      id: a.id,
+      name: a.name || a.id,
+      ...(a.description ? { description: a.description } : {}),
+      ...(a.model?.providerID && a.model?.id ? { model: modelText(a.model) } : {}),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+  return { agents }
+}
+
 async function presence() {
   const now = Date.now()
   const throttled = now - shared.presenceAt < 10_000
@@ -982,6 +1019,8 @@ export default {
         }
       },
       presence: async () => presence(),
+      models: async () => json(await modelsOutput(ctx)),
+      agents: async () => json(await agentsOutput(ctx)),
     })
     registrations.push(rpc)
     shared.registrations.add(rpc)
