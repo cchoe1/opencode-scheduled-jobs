@@ -8,7 +8,8 @@ continue.
   every N minutes, every N hours, daily, weekly, or the first day of the month, with an optional end date. A preview
   shows the next runs as you edit.
 - **Desktop app UI:**
-  - **Where to find it:** a titlebar button, the `/schedules` command, a side-panel tab, and a page under Settings.
+  - **Where to find it:** a titlebar button, the `/schedules` command, the `Cmd/Ctrl+Shift+J` shortcut (change it in
+    Settings > Shortcuts), a side-panel tab, and a page under Settings.
   - **Layout:** a list (Scheduled and Expired sections) or a month calendar.
   - **Actions per job:** run now, edit, view logs, delete.
 - **Notifications** when a run starts or finishes, optionally with the start of the reply. In the desktop app, "Show

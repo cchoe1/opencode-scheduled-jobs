@@ -65,13 +65,19 @@ export default Plugin.define({
     const countTimer = setInterval(refreshCount, 30_000)
     onCleanup(() => clearInterval(countTimer))
 
+    // The open command's effective keybind (the user can rebind it in Settings > Shortcuts), for the pill's tooltip.
+    const shortcut = () => {
+      const keys = ctx.keybinds.keybind(`${ctx.id}.open`)
+      return keys.length ? ` (${keys.join("+")})` : ""
+    }
+
     ctx.add(TitlebarItem, () => {
       const n = active()
       return {
         id: "scheduler",
         icon: "task" as const,
         label: n === undefined ? "Scheduler" : `Scheduler · ${n} active`,
-        title: "Show scheduled jobs",
+        title: `Show scheduled jobs${shortcut()}`,
         run: openDialog,
       }
     })
@@ -80,6 +86,7 @@ export default Plugin.define({
       id: "open",
       title: "Scheduler: Show scheduled jobs",
       keywords: "cron schedule jobs timer",
+      bind: "mod+shift+j",
       slash: { name: "schedules" },
       run: openDialog,
     })
