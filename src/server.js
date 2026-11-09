@@ -13,6 +13,7 @@
 //   stateDir     where the files live (default: see paths.js)
 //   tickSeconds  how often due jobs are checked (default 20)
 //   history      runs kept per job (default 200)
+//   desktopStateFile  the desktop app's drafts.sqlite, read for which models its picker shows (default: see paths.js)
 
 import { mkdir, readFile, rename, writeFile, rm, stat, copyFile } from "node:fs/promises"
 import { homedir, hostname } from "node:os"
@@ -21,7 +22,7 @@ import { randomUUID } from "node:crypto"
 import { Scheduler, PLUGIN_ID } from "./rpc.js"
 import * as Schedule from "./schedule.js"
 import { notify } from "./notify.js"
-import { resolveStateDir, jobsFile, leaderFile, presenceFile, logFile } from "./paths.js"
+import { desktopStateFile, resolveStateDir, jobsFile, leaderFile, presenceFile, logFile } from "./paths.js"
 
 const log = (...args) => console.error(`[${PLUGIN_ID}]`, ...args)
 
@@ -55,7 +56,7 @@ shared.settled = async () => {
 const PRESENCE_MS = 75_000
 const RESULT_LIMIT = 4000
 
-let config = { stateDir: resolveStateDir(), tickMs: 20_000, history: 200, pollMs: 5000, retryMs: 2000 }
+let config = { stateDir: resolveStateDir(), desktopState: desktopStateFile(), tickMs: 20_000, history: 200, pollMs: 5000, retryMs: 2000 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const unwrap = (r) => (r && typeof r === "object" && "data" in r && !("id" in r) ? r.data : r)
@@ -772,7 +773,49 @@ async function occurrencesOutput(from, to) {
   return out
 }
 
-/** Enabled chat models of the location's connected providers, for the job form's model picker. */
+/**
+ * Which models the desktop app's model picker shows: a Map of "provider/model" to true (show) or false (hide), read
+ * from the app's state database (key `model` of `opencode.global.dat`, field `user[].visibility`). That file is the
+ * app's own, undocumented storage, so any failure (no desktop app, no SQLite in this runtime, a changed format) gives
+ * undefined and the caller shows every model.
+ */
+async function pickerVisibility() {
+  const file = config.desktopState
+  if (!file || !(await stat(file).catch(() => undefined))) return undefined
+  let db
+  try {
+    let raw
+    try {
+      const { Database } = await import("bun:sqlite")
+      db = new Database(file, { readonly: true })
+      raw = db.query("select value from state where name = 'opencode.global.dat' and key = 'model'").get()?.value
+    } catch (e) {
+      if (db) throw e
+      const { DatabaseSync } = await import("node:sqlite")
+      db = new DatabaseSync(file, { readOnly: true })
+      raw = db.prepare("select value from state where name = 'opencode.global.dat' and key = 'model'").get()?.value
+    }
+    const user = JSON.parse(raw ?? "null")?.user
+    if (!Array.isArray(user)) return undefined
+    const map = new Map()
+    for (const u of user) {
+      if (u?.providerID && u?.modelID && (u.visibility === "show" || u.visibility === "hide")) map.set(`${u.providerID}/${u.modelID}`, u.visibility === "show")
+    }
+    return map
+  } catch (e) {
+    log("couldn't read the desktop app's model visibility:", e?.message ?? e)
+    return undefined
+  } finally {
+    try {
+      db?.close()
+    } catch {}
+  }
+}
+
+/**
+ * Enabled chat models of the location's connected providers, for the job form's model picker. When the desktop app's
+ * model picker has hidden some, those are left out too, so the list matches the app's.
+ */
 async function modelsOutput(ctx) {
   if (typeof ctx?.model?.list !== "function") return { models: [] }
   const list = unwrap(await ctx.model.list())
@@ -780,9 +823,11 @@ async function modelsOutput(ctx) {
     typeof ctx.provider?.list === "function" ? ctx.provider.list().then(unwrap, () => []) : [],
     typeof ctx.model.default === "function" ? ctx.model.default().then(unwrap, () => undefined) : undefined,
   ])
+  const visible = await pickerVisibility()
   const providerName = new Map((Array.isArray(providers) ? providers : []).map((p) => [p.id, p.name || p.id]))
   const models = (Array.isArray(list) ? list : [])
     .filter((m) => m?.providerID && m?.id && m.enabled !== false && (!m.type || m.type === "chat"))
+    .filter((m) => visible?.get(`${m.providerID}/${m.id}`) !== false)
     .map((m) => ({
       ref: `${m.providerID}/${m.id}`,
       provider: providerName.get(m.providerID) ?? m.providerID,
@@ -978,6 +1023,7 @@ export default {
     const opts = ctx.options ?? {}
     config = {
       stateDir: resolveStateDir(opts.stateDir),
+      desktopState: desktopStateFile(opts.desktopStateFile),
       tickMs: Math.max(0.05, Number(opts.tickSeconds ?? 20)) * 1000,
       history: Math.max(1, Math.floor(Number(opts.history ?? 200))),
       pollMs: Math.max(10, Number(opts.pollSeconds ?? 5) * 1000),

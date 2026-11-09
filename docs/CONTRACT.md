@@ -106,7 +106,7 @@ again on startup.
 | `logs` | `{ id, limit?: number }` | `{ runs: Run[] }` |
 | `result` | `{ sessionID }` | `{ text: string }`, the session's final assistant reply, read on demand and never stored |
 | `presence` | `{}` | `{ ok: true }`; the desktop UI calls it every 30 s (see Notifications) |
-| `models` | `{}` | `{ models: { ref: "provider/model", provider, name, variants: string[] }[], default?: string }`: enabled chat models of the connected providers, sorted by provider then name; `default` is OpenCode's default model ref |
+| `models` | `{}` | `{ models: { ref: "provider/model", provider, name, variants: string[] }[], default?: string }`: enabled chat models of the connected providers, sorted by provider then name; `default` is OpenCode's default model ref. Models the desktop app's model picker hides are left out (see Paths) |
 | `agents` | `{}` | `{ agents: { id, name, description?, model? }[] }`: primary, non-hidden agents sorted by name; `model` is the agent's own model (`provider/model#variant`) when it sets one |
 
 ## RPC events
@@ -137,6 +137,12 @@ There are two delivery paths:
 State dir: option `stateDir`, else
 - `%LOCALAPPDATA%\opencode-scheduler` on Windows
 - `$XDG_STATE_HOME/opencode-scheduler` on Linux and macOS, falling back to `~/.local/state/opencode-scheduler`
+
+The desktop app's model visibility is read (read-only) from its `drafts.sqlite`, row `state(name = 'opencode.global.dat',
+key = 'model')`, field `user[].visibility` (`show` / `hide`; a model with no entry counts as shown). Option
+`desktopStateFile`, else `~/Library/Application Support/ai.opencode.desktop/drafts.sqlite` on macOS,
+`%APPDATA%\ai.opencode.desktop\drafts.sqlite` on Windows, `$XDG_CONFIG_HOME/ai.opencode.desktop/drafts.sqlite`
+(default `~/.config`) on Linux. It's the app's private storage: when it can't be read, every model is listed.
 
 Files:
 - `jobs.json`: the job list (version 2: `{ version: 2, jobs }`)

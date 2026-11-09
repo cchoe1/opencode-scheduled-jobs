@@ -22,3 +22,15 @@ export const leaderFile = (dir) => join(dir, "leader.json")
 export const presenceFile = (dir) => join(dir, "presence.json")
 export const logsDir = (dir) => join(dir, "logs")
 export const logFile = (dir, jobId) => join(logsDir(dir), `${String(jobId).replace(/[^\w.-]/g, "_")}.json`)
+
+/** The OpenCode desktop app's state database, where its model picker keeps which models are shown. */
+export function desktopStateFile(option, env = process.env, platform = process.platform, home = homedir()) {
+  if (option) return resolve(String(option).replace(/^~(?=[\\/]|$)/, home))
+  const base =
+    platform === "darwin"
+      ? join(home, "Library", "Application Support")
+      : platform === "win32"
+        ? env.APPDATA || join(home, "AppData", "Roaming")
+        : env.XDG_CONFIG_HOME || join(home, ".config")
+  return join(base, "ai.opencode.desktop", "drafts.sqlite")
+}

@@ -33,7 +33,7 @@ async function setup(options = {}, before) {
   const calls = { create: [], prompt: [] }
   let counter = 0
   const ctx = {
-    options: { stateDir, tickSeconds: 3600, noAutoTick: true, pollSeconds: 0.01, retrySeconds: 0.01, ...options },
+    options: { stateDir, desktopStateFile: join(stateDir, "no-desktop.sqlite"), tickSeconds: 3600, noAutoTick: true, pollSeconds: 0.01, retrySeconds: 0.01, ...options },
     location: { directory: "/proj" },
     tool: {
       transform: async (fn) => {
@@ -662,6 +662,39 @@ await t("models: enabled chat models, sorted, with provider names, variants and 
       { ref: "anthropic/claude-b", provider: "Anthropic", name: "Claude B", variants: ["high", "low"] },
       { ref: "openai/gpt-x", provider: "openai", name: "GPT X", variants: [] },
     ])
+  } finally {
+    await e.teardown()
+  }
+})
+
+await t("models: leaves out models the desktop app's model picker hides", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "sched-desktop-"))
+  const file = join(dir, "drafts.sqlite")
+  const { DatabaseSync } = await import("node:sqlite")
+  const db = new DatabaseSync(file)
+  db.exec("create table state (name text not null, key text not null, value text not null, updated_at integer not null, primary key (name, key))")
+  const user = [
+    { providerID: "opencode", modelID: "shown-free", visibility: "show" },
+    { providerID: "opencode", modelID: "hidden-free", visibility: "hide" },
+    { providerID: "local", modelID: "off", visibility: "hide" },
+  ]
+  db.prepare("insert into state values ('opencode.global.dat', 'model', ?, 0)").run(JSON.stringify({ user, recent: [] }))
+  db.close()
+  const e = await setup({ desktopStateFile: file })
+  try {
+    e.ctx.model = {
+      list: async () => ({
+        location: {},
+        data: [
+          { providerID: "opencode", id: "shown-free", name: "Shown", enabled: true, variants: [] },
+          { providerID: "opencode", id: "hidden-free", name: "Hidden", enabled: true, variants: [] },
+          { providerID: "local", id: "off", name: "Off", enabled: true, variants: [] },
+          { providerID: "local", id: "unlisted", name: "Unlisted", enabled: true, variants: [] },
+        ],
+      }),
+    }
+    const refs = (await e.rpc.models()).models.map((m) => m.ref)
+    assert.deepEqual(refs, ["local/unlisted", "opencode/shown-free"]) // no entry = shown, as in the app
   } finally {
     await e.teardown()
   }
