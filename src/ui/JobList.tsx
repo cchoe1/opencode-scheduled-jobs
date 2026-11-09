@@ -51,7 +51,7 @@ function JobRow(props: { env: Env; job: Job; now: number; actions: Actions; form
         <ui.Button size="small" variant="ghost" icon="bullet-list" onClick={() => props.actions.logs(job())}>
           Logs
         </ui.Button>
-        <ui.Button size="small" variant="ghost" icon="trash" onClick={() => props.actions.remove(job())}>
+        <ui.Button size="small" variant="danger" icon="trash" onClick={() => props.actions.remove(job())}>
           Delete
         </ui.Button>
       </div>
