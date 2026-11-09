@@ -1,53 +1,62 @@
-// The RPC contract between the scheduler's server half and its desktop-app panel.
-// Plain JSON Schema, so this file needs no imports and works in both processes.
+// The RPC contract between the scheduler's server half and its desktop-app UI. See docs/CONTRACT.md for the data
+// shapes. Plain JSON Schema, so this file needs no imports and works in both processes. Schemas are loose on purpose:
+// the server validates inputs itself and returns readable `invalid` errors.
 
 export const PLUGIN_ID = "local.scheduler"
 
-const job = {
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    name: { type: "string" },
-    schedule: { type: "string" },
-    prompt: { type: "string" },
-    directory: { type: "string" },
-    agent: { type: "string" },
-    model: { type: "string" },
-    enabled: { type: "boolean" },
-  },
-}
-
-const ok = { type: "object" }
+const obj = { type: "object" }
+const id = { type: "object", properties: { id: { type: "string" } }, required: ["id"] }
 
 export const Scheduler = {
   id: PLUGIN_ID,
   methods: {
-    /** Every job with its next run and recent runs. */
-    list: { input: { type: "object" }, output: { type: "object" } },
-    /** Creates a job (no id) or updates one (with id). Returns the saved job. */
+    /** Every job, with derived status, next run and last run. */
+    list: { input: obj, output: obj },
+    /** Creates a job (no id) or updates one (with id; partial fields merge). Returns the saved job. */
     save: {
-      input: { type: "object", properties: { job }, required: ["job"] },
-      output: ok,
-      errors: { invalid: { type: "object" } },
+      input: { type: "object", properties: { job: obj }, required: ["job"] },
+      output: obj,
+      errors: { invalid: obj },
     },
-    remove: { input: { type: "object", properties: { id: { type: "string" } }, required: ["id"] }, output: ok },
-    /** Runs a job now, outside its schedule. Returns the run. */
-    run: {
-      input: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
-      output: ok,
-      errors: { failed: { type: "object" } },
-    },
-    /** Checks a schedule string and previews its next runs. */
+    /** Deletes a job and its run log. */
+    remove: { input: id, output: obj },
+    /** Runs a job now, outside its schedule. */
+    run: { input: id, output: obj, errors: { failed: obj } },
+    /** Checks a Schedule and returns its description and next `count` (default 5) run times. */
     preview: {
-      input: { type: "object", properties: { schedule: { type: "string" } }, required: ["schedule"] },
-      output: ok,
+      input: { type: "object", properties: { schedule: obj, count: { type: "number" } }, required: ["schedule"] },
+      output: obj,
     },
+    /** Future occurrences and past runs of every job between `from` and `to` (ms), for the calendar. */
+    occurrences: {
+      input: {
+        type: "object",
+        properties: { from: { type: "number" }, to: { type: "number" } },
+        required: ["from", "to"],
+      },
+      output: obj,
+    },
+    /** A job's run log, newest first. */
+    logs: {
+      input: { type: "object", properties: { id: { type: "string" }, limit: { type: "number" } }, required: ["id"] },
+      output: obj,
+    },
+    /** The final assistant reply of a run's session, read on demand (never stored). */
+    result: {
+      input: { type: "object", properties: { sessionID: { type: "string" } }, required: ["sessionID"] },
+      output: obj,
+      errors: { unavailable: obj },
+    },
+    /** The desktop UI's heartbeat: while one is recent, the server leaves notifications to the app. */
+    presence: { input: obj, output: obj },
   },
   events: {
-    /** The job list changed in this process (a save, a removal, or a run). */
-    changed: { schema: { type: "object" } },
-    /** A job started a session. */
-    ran: { schema: { type: "object" } },
+    /** The job list changed (a save, removal, run, or expiry). */
+    changed: { schema: obj },
+    /** A run started: `{ run, job: { id, name, notify } }`. */
+    runStarted: { schema: obj },
+    /** A run finished: `{ run, job: { id, name, notify }, result? }`. */
+    runFinished: { schema: obj },
   },
 }
 
