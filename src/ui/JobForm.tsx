@@ -148,7 +148,7 @@ export function JobForm(props: { env: Env; job?: Job; onCancel(): void; onSaved(
     return opts
   }
 
-  const tzOptions = zones([props.job?.schedule.timezone ?? ""]).map((z) => ({ value: z, label: z }))
+  const tzOptions = zones([props.job?.schedule.timezone ?? ""])
   const repeatOptions = wasCron ? [...REPEATS, { value: "cron" as Repeat, label: "Custom (cron)" }] : REPEATS
   const timed = () => f.repeat === "minutes" || f.repeat === "hours"
   const canEnd = () => f.repeat !== "none"
@@ -316,13 +316,20 @@ export function JobForm(props: { env: Env; job?: Job; onCancel(): void; onSaved(
           )}
           {field(
             "Start time",
-            <input class="sched-input" type="time" value={f.startTime} onInput={(e) => setF("startTime", e.currentTarget.value)} />,
+            <div class="sched-timerow">
+              <input class="sched-input" type="time" value={f.startTime} onInput={(e) => setF("startTime", e.currentTarget.value)} />
+              <select
+                class="sched-tz"
+                aria-label="Timezone"
+                title={`Timezone: ${f.timezone}`}
+                value={f.timezone}
+                onChange={(e) => setF("timezone", e.currentTarget.value)}
+              >
+                <For each={tzOptions}>{(z) => <option value={z} selected={z === f.timezone}>{z}</option>}</For>
+              </select>
+            </div>,
           )}
         </div>
-        {field(
-          "Timezone",
-          <ui.Select<string> label="Timezone" options={tzOptions} value={f.timezone} onChange={(v) => setF("timezone", v)} />,
-        )}
         <div class="sched-row2">
           {field(
             "Repeat",
