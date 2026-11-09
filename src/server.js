@@ -26,19 +26,26 @@ import { resolveStateDir, jobsFile, leaderFile, presenceFile, logFile } from "./
 const log = (...args) => console.error(`[${PLUGIN_ID}]`, ...args)
 
 // One scheduler loop per process, shared by every location (project) that loads the plugin.
+// The state object outlives a plugin reload (and an upgrade from an older version, whose object lacks newer fields),
+// so missing fields are filled in, and the loop timer is replaced when a different copy of this module owns it.
 const STATE = Symbol.for(PLUGIN_ID)
-const shared = (globalThis[STATE] ??= {
-  contexts: new Set(),
-  registrations: new Set(),
-  timer: undefined,
-  busy: false,
-  presenceAt: 0,
-  statuses: new Map(),
-  monitoring: new Set(),
-  pending: new Set(),
-  recovered: false,
-  cache: new Map(),
-})
+const MODULE = Symbol("scheduler module instance")
+const shared = (globalThis[STATE] ??= {})
+for (const [key, make] of Object.entries({
+  contexts: () => new Set(),
+  registrations: () => new Set(),
+  timer: () => undefined,
+  timerOwner: () => undefined,
+  busy: () => false,
+  presenceAt: () => 0,
+  statuses: () => new Map(),
+  monitoring: () => new Set(),
+  pending: () => new Set(),
+  recovered: () => false,
+  cache: () => new Map(),
+})) {
+  if (!(key in shared)) shared[key] = make()
+}
 // Hooks the tests use.
 shared.tick = () => tick()
 shared.settled = async () => {
@@ -980,7 +987,14 @@ export default {
     shared.registrations.add(rpc)
     shared.contexts.add(ctx)
 
+    if (shared.timer && shared.timerOwner !== MODULE) {
+      // An older copy of the plugin (before a reload or upgrade) still runs its loop: take it over.
+      clearInterval(shared.timer)
+      shared.timer = undefined
+      shared.busy = false
+    }
     if (!shared.timer) {
+      shared.timerOwner = MODULE
       shared.timer = setInterval(tick, config.tickMs)
       shared.timer.unref?.()
       if (!opts.noAutoTick) setTimeout(tick, 2000).unref?.()
@@ -991,7 +1005,7 @@ export default {
       shared.contexts.delete(ctx)
       shared.registrations.delete(rpc)
       for (const r of registrations) await r.dispose().catch(() => {})
-      if (shared.contexts.size === 0 && shared.timer) {
+      if (shared.contexts.size === 0 && shared.timer && shared.timerOwner === MODULE) {
         clearInterval(shared.timer)
         shared.timer = undefined
         shared.recovered = false

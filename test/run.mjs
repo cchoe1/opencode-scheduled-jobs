@@ -13,6 +13,7 @@ const jobs = [
   ["server.test.js", undefined],
   ["server.test.js", "Asia/Tokyo"],
   ["scripts.test.js", undefined],
+  ["upgrade.test.js", undefined],
 ]
 let failed = 0
 for (const [file, tz] of jobs) {
