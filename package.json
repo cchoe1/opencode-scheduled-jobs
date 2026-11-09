@@ -5,9 +5,9 @@
   "type": "module",
   "description": "OpenCode v2 plugin: schedule prompts to run in new sessions, with a side panel in the desktop app.",
   "scripts": {
-    "build": "rm -rf dist && mkdir -p dist && cp src/server.js src/schedule.js src/rpc.js dist/ && vite build",
-    "test": "node test/schedule.test.js",
-    "install-plugin": "npm run build && rm -rf ~/.config/opencode/plugins/scheduler && cp -R dist ~/.config/opencode/plugins/scheduler"
+    "build": "node scripts/build.mjs",
+    "test": "node test/run.mjs",
+    "install-plugin": "node scripts/install.mjs"
   },
   "devDependencies": {
     "@opencode/plugin": "2.2.6",
