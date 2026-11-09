@@ -275,3 +275,9 @@
 .sched-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 .sched-cal-narrow .sched-cal-day { min-height: 44px; cursor: pointer; }
 .sched-cal-narrow .sched-cal-wd { font-size: 10px; }
+.sched-job-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}

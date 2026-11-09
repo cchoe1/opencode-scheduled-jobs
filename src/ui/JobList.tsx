@@ -14,9 +14,22 @@ function JobRow(props: { env: Env; job: Job; now: number; actions: Actions; form
           <strong>{job().name}</strong>
           <span class="sched-muted">{job().description}</span>
         </div>
-        <Show when={!expired()}>
-          <ui.Switch label="Enabled" hideLabel checked={job().enabled} disabled={busy()} onChange={(v) => props.actions.toggle(job(), v)} />
-        </Show>
+        <div class="sched-job-controls">
+          <Show when={!expired()}>
+            <ui.Switch label="Enabled" hideLabel checked={job().enabled} disabled={busy()} onChange={(v) => props.actions.toggle(job(), v)} />
+          </Show>
+          <ui.Menu
+            label={`Actions for ${job().name}`}
+            disabled={busy()}
+            items={[
+              { label: "Run now", icon: "enter", onSelect: () => props.actions.run(job()) },
+              { label: "Edit", icon: "edit", disabled: props.formOpen, onSelect: () => props.actions.edit(job()) },
+              { label: "Logs", icon: "bullet-list", onSelect: () => props.actions.logs(job()) },
+              { type: "separator" },
+              { label: "Delete", icon: "trash", onSelect: () => props.actions.remove(job()) },
+            ]}
+          />
+        </div>
       </div>
       <div class="sched-meta">
         <span>
@@ -40,20 +53,6 @@ function JobRow(props: { env: Env; job: Job; now: number; actions: Actions; form
         {job().directory}
         {job().agent ? ` · ${job().agent}` : ""}
         {job().model ? ` · ${job().model}` : ""}
-      </div>
-      <div class="sched-job-actions">
-        <ui.Button size="small" busy={busy()} onClick={() => props.actions.run(job())}>
-          Run now
-        </ui.Button>
-        <ui.Button size="small" variant="ghost" icon="edit" onClick={() => props.actions.edit(job())} disabled={props.formOpen}>
-          Edit
-        </ui.Button>
-        <ui.Button size="small" variant="ghost" icon="bullet-list" onClick={() => props.actions.logs(job())}>
-          Logs
-        </ui.Button>
-        <ui.Button size="small" variant="danger" icon="trash" onClick={() => props.actions.remove(job())}>
-          Delete
-        </ui.Button>
       </div>
     </li>
   )
