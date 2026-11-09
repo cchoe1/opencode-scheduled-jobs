@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "OpenCode v2 plugin: schedule prompts to run in new sessions, with a side panel in the desktop app.",
+  "description": "OpenCode plugin: schedule prompts to run in new sessions, with a desktop-app UI, notifications, logs and a calendar.",
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node test/run.mjs",
@@ -16,5 +16,6 @@
     "vite-plugin-solid": "2.11.10",
     "effect": "4.1.0",
     "typescript": "5.9.3"
-  }
+  },
+  "license": "MIT"
 }
